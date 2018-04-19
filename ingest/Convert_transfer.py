@@ -70,8 +70,8 @@ def get_arguments():
     parser.add_argument("--genome",dest="org",choices=["hg19","mm10","hg19_mm10","GRCh38"],
                                              help=" ".join(["Choose genome, Note: GRCh38 only",
                                                             "available for Cellranger"]))
-    parser.add_argument("--skip_demult",dest="skip_demult",help=" ".join(["Skip demultiplexing",
-                                                                          "only run pipeline."])
+    parser.add_argument("--skip_demult",dest="skip_demult",action="store_true",help=" ".join(["Skip demultiplexing",
+                                                                          "only run pipeline."]))
     args = parser.parse_args()
     return(args)
 
@@ -127,9 +127,10 @@ def workspace_setup(service_acc_path,source_dir):
     scopes=["https://www.googleapis.com/auth/userinfo.profile",
             "https://www.googleapis.com/auth/userinfo.email"]
 
-    credentials=ServiceAccountCredentials.from_json_keyfile_name(
-                                                service_acc_path,
-                                                scopes=scopes)
+    #credentials=ServiceAccountCredentials.from_json_keyfile_name(
+    #                                            service_acc_path,
+    #                                            scopes=scopes)
+    credentials,project=google.auth.default()
     authed_session=AuthorizedSession(credentials)
 
     body={"namespace":"regev-collab",
@@ -151,11 +152,14 @@ def seqrundate(run_info):
         return(False)
 
 
-def make_samplesheet(fastq_dir,samplesheet,bucket_path):
-    cmd=" ".join(["python",CREATE_SAMPLESHEET_SCRIPT,
-                  "--dir", fastq_dir,"--index",
-                  "--replace="+fastq_dir+":"+bucket_path,
-                  "--output", samplesheet])
+def make_samplesheet(fastq_dir,samplesheet,bucket_path,pipeline):
+    cmd_list=["python",CREATE_SAMPLESHEET_SCRIPT,
+              "--dir", fastq_dir,
+              "--replace="+fastq_dir+":"+bucket_path,
+              "--output", samplesheet]
+    if pipeline=="cellranger":
+        cmd_list.append("--index")
+    cmd=" ".join(cmd_list)
     return(subprocess.call(cmd,shell=True))
 
 def get_timestamp(source_dir):
@@ -231,8 +235,7 @@ def upload_fastqs(source_dir,bucket_name):
     return(return_code)
 
 def add_workspace_config(inputs,wdl_info,session,
-                         namespace,name,
-                         bucket_samplesheet): 
+                         namespace,name): 
     '''
     POST inputs to pipeline and wdl info to session
     inputs: dict with inputs to pipeline
@@ -254,6 +257,7 @@ def add_workspace_config(inputs,wdl_info,session,
           "methodConfigVersion": 1,
           "deleted": False
          }
+    print body
     response=session.post((os.sep).join(["https://api.firecloud.org/api/workspaces",
                                           namespace,name,"methodconfigs"]),
                                           headers={"Content-type":"application/json",
@@ -422,12 +426,15 @@ if __name__ == "__main__":
                                                "rnaseq_wdl_info")
     
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=parsed_args.service_acc_path
+    add_suffix=source_dir_base+"_fastqs"
     if parsed_args.skip_demult:
         fastq_dir=parsed_args.source_dir
+        base=source_dir_base
     else:
         fastq_dir=make_directory(os.path.join(config_dict["fastq_dir"],
-                                          source_dir_base+"_fastqs"))
-        fastq_dir=os.path.join(config_dict["fastq_dir"],source_dir_base+"_fastqs")
+                                              add_suffix))
+        fastq_dir=os.path.join(config_dict["fastq_dir"],add_suffix)
+        base=add_suffix
         convert_code=convertbcls(parsed_args.source_dir,fastq_dir,
                                  parsed_args.nextseq_samplesheet,
                                  parsed_args.pipeline)
@@ -438,18 +445,22 @@ if __name__ == "__main__":
         flowcell_id=get_flowcellid(source_dir_base)
         timestamp=get_timestamp(parsed_args.source_dir)
         seqrun_date=seqrundate(os.path.join(parsed_args.source_dir,RUNINFO))
-        tags=[flowcell_id,seqrun_date]
+        if parsed_args.skip_demult:
+            tags=[timestamp]
+        else:
+            tags=[flowcell_id,seqrun_date]
         response_tags=set_tags(session,response["namespace"],
                                response["name"],tags)
         bucket_samplesheet="gs://"+os.path.join(response['bucketName'],
-                                                source_dir_base+"_fastqs",
+                                                base,
                                                 "samples.txt")
         bucketname_fastq="gs://"+os.path.join(response['bucketName'],
-                                              source_dir_base+"_fastqs")
+                                              base)
         
         samplsheet_code=make_samplesheet(fastq_dir,
                                          os.path.join(fastq_dir,"samples.txt"),
-                                         bucketname_fastq)
+                                         bucketname_fastq,
+                                         parsed_args.pipeline)
         if samplsheet_code==0:
             upload_response=upload_fastqs(fastq_dir,response['bucketName'])
         if upload_response==0:
