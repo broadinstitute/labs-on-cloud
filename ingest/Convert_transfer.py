@@ -442,12 +442,12 @@ if __name__ == "__main__":
     if os.listdir(fastq_dir):
         response,session=workspace_setup(parsed_args.service_acc_path,
                                          source_dir_base)
-        flowcell_id=get_flowcellid(source_dir_base)
         timestamp=get_timestamp(parsed_args.source_dir)
-        seqrun_date=seqrundate(os.path.join(parsed_args.source_dir,RUNINFO))
         if parsed_args.skip_demult:
             tags=[timestamp]
         else:
+            flowcell_id=get_flowcellid(source_dir_base)
+            seqrun_date=seqrundate(os.path.join(parsed_args.source_dir,RUNINFO))
             tags=[flowcell_id,seqrun_date]
         response_tags=set_tags(session,response["namespace"],
                                response["name"],tags)
