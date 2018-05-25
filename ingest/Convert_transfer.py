@@ -62,10 +62,10 @@ def get_arguments():
     parser.add_argument("--email_addresses",help=" ".join(["User email ids you want to",
                                                            "give access to Eg. ",
                                                            "abc@gmail.com,xyz@gmail.com"]))
-    parser.add_argument("--config_file",help=" ".join(["config file containing admin settings,",
+    parser.add_argument("--config_json_file",help=" ".join(["config file containing admin settings,",
                                                         "pipeline settings"
                                                         "and smtp address"]))
-    parser.add_argument("--pipeline",choices=["dropseq", "rnaseq", "cellranger"],
+    parser.add_argument("--pipeline",choices=["dropseq", "cellranger"],
                                               help="Choose pipeline you want to run")
     parser.add_argument("--genome",dest="org",choices=["hg19","mm10","hg19_mm10","GRCh38"],
                                              help=" ".join(["Choose genome, Note: GRCh38 only",
@@ -356,6 +356,14 @@ def update_entities(namespace,name,session,entity_file):
     print response.status_code
     return(response)                                         
 
+def check_response(response_recieved,response_needed):
+    '''
+    response_recieved: status code from API request
+    response_needed: status code needed for success
+    '''
+    if response_recieved!=response_needed:
+        print "Error recieved: "+str(response_recieved)
+        sys.exit()
 
 if __name__ == "__main__":
     #parse arguments
@@ -371,60 +379,41 @@ if __name__ == "__main__":
     source_dir_base=get_basename(parsed_args.source_dir)
     if parsed_args.email_addresses:
         addresses=((parsed_args.email_addresses).strip()).split(",")
-    config=ConfigParser.ConfigParser()
-    if os.path.isfile(parsed_args.config_file):
-        config.read(parsed_args.config_file)
+    #config=ConfigParser.ConfigParser()
+     
+    if os.path.isfile(parsed_args.config_json_file):
+        with open (parsed_args.config_json_file) as json_file:
+            config=json.load(json_file)
     else:
         print("Config file does not exist.")
         exit(1)
     #parse config file
     config_dict={}
-    config_dict["firstName"]=config.get("ADMIN_SETTINGS",
-                                        "firstName")
-    config_dict["lastName"]=config.get("ADMIN_SETTINGS",
-                                       "lastName")
-    config_dict["title"]=config.get("ADMIN_SETTINGS",
-                                    "title")
-    config_dict["contactEmail"]=config.get("ADMIN_SETTINGS",
-                                           "contactEmail")
-    config_dict["institute"]=config.get("ADMIN_SETTINGS",
-                                        "institute")
-    config_dict["institutionalProgram"]=config.get("ADMIN_SETTINGS",
-                                        "institutionalProgram")
-    config_dict["programLocationCity"]=config.get("ADMIN_SETTINGS",
-                                             "programLocationCity")
-    config_dict["programLocationState"]=config.get("ADMIN_SETTINGS",
-                                             "programLocationState")
-    config_dict["programLocationCountry"]=config.get("ADMIN_SETTINGS",
-                                            "programLocationCountry")
-    config_dict["pi"]=config.get("ADMIN_SETTINGS","pi")
-    config_dict["nonProfitStatus"]=config.get("ADMIN_SETTINGS",
-                                             "nonProfitStatus")
-    config_dict["smtp_server"]=config.get("ADMIN_SETTINGS",
-                                          "smtp_server")
-    config_dict["job_log_location"]=config.get("ADMIN_SETTINGS",
-                                          "job_log_location")
-    config_dict["fastq_dir"]=config.get("ADMIN_SETTINGS",
-                                        "fastq_dir")
-    config_dict["entity_file"]=config.get("PIPELINE_SETTINGS",
-                                          "entity_file")
-    config_dict["dropseq_input_json"]=config.get("PIPELINE_SETTINGS",
-                                                 "dropseq_input_json")
-    config_dict["dropseq_wdl_info"]=config.get("PIPELINE_SETTINGS",
-                                               "dropseq_wdl_info")
-    config_dict["dropseq_attr_lists"]=config.get("PIPELINE_SETTINGS",
-                                                "dropseq_attr_lists")
-    config_dict["cellranger_input_json"]=config.get("PIPELINE_SETTINGS",
-                                                 "cellranger_input_json")
-    config_dict["cellranger_attr_lists"]=config.get("PIPELINE_SETTINGS",
-                                                 "cellranger_attr_lists")
-    config_dict["cellranger_wdl_info"]=config.get("PIPELINE_SETTINGS",
-                                               "cellranger_wdl_info")
-    config_dict["rnaseq_input_json"]=config.get("PIPELINE_SETTINGS",
-                                                "rnaseq_input_json")
-    config_dict["rnaseq_wdl_info"]=config.get("PIPELINE_SETTINGS",
-                                               "rnaseq_wdl_info")
-    
+    config_dict["firstName"]=config.get("ADMIN_SETTINGS").get("firstName")
+    config_dict["lastName"]=config.get("ADMIN_SETTINGS").get("lastName")
+    config_dict["title"]=config.get("ADMIN_SETTINGS").get("title")
+    config_dict["contactEmail"]=config.get("ADMIN_SETTINGS").get("contactEmail")
+    config_dict["institute"]=config.get("ADMIN_SETTINGS").get("institute")
+    config_dict["institutionalProgram"]=config.get("ADMIN_SETTINGS").get("institutionalProgram")
+    config_dict["programLocationCity"]=config.get("ADMIN_SETTINGS").get("programLocationCity")
+    config_dict["programLocationState"]=config.get("ADMIN_SETTINGS").get("programLocationState")
+    config_dict["programLocationCountry"]=config.get("ADMIN_SETTINGS").get("programLocationCountry")
+    config_dict["pi"]=config.get("ADMIN_SETTINGS").get("pi")
+    config_dict["nonProfitStatus"]=config.get("ADMIN_SETTINGS").get("nonProfitStatus")
+    config_dict["smtp_server"]=config.get("ADMIN_SETTINGS").get("smtp_server")
+    config_dict["job_log_location"]=config.get("ADMIN_SETTINGS").get("job_log_location")
+    config_dict["fastq_dir"]=config.get("ADMIN_SETTINGS").get("fastq_dir")
+    config_dict["entity_file"]=config.get("PIPELINE_SETTINGS").get("entity_file")
+
+    '''
+    config_dict["dropseq_input_json"]=config.get("PIPELINE_SETTINGS").get("dropseq_input_json")
+    config_dict["dropseq_wdl_info"]=config.get("PIPELINE_SETTINGS").get("dropseq_wdl_info")
+    config_dict["dropseq_attr_lists"]=config.get("PIPELINE_SETTINGS").get("dropseq_attr_lists")
+    config_dict["cellranger_input_json"]=config.get("PIPELINE_SETTINGS").get("cellranger_input_json")
+    config_dict["cellranger_attr_lists"]=config.get("PIPELINE_SETTINGS").get("cellranger_attr_lists")
+    config_dict["cellranger_wdl_info"]=config.get("PIPELINE_SETTINGS").get("cellranger_wdl_info")
+    '''
+
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=parsed_args.service_acc_path
     add_suffix=source_dir_base+"_fastqs"
     if parsed_args.skip_demult:
@@ -464,44 +453,28 @@ if __name__ == "__main__":
         if samplsheet_code==0:
             upload_response=upload_fastqs(fastq_dir,response['bucketName'])
         if upload_response==0:
-            if parsed_args.pipeline=="dropseq":
-                input_dict_file=config_dict["dropseq_input_json"]
-                input_dict=get_dict(input_dict_file)
-                input_dict["dropseq.inputSamplesFile"]='"'+bucket_samplesheet+'"'
-                wdl_info_str=config_dict["dropseq_wdl_info"]
-                wdl_info=json.loads(wdl_info_str)
-                attr_lists=config_dict["dropseq_attr_lists"]
-                attr_dict=json.loads(attr_lists)
-                attr_params=attr_dict[parsed_args.org]
-            elif parsed_args.pipeline=="cellranger":
-                input_dict_file=config_dict["cellranger_input_json"]
-                input_dict=get_dict(input_dict_file)
-                input_dict["cellranger_count_multi.params_file"]='"'+bucket_samplesheet+'"'
-                wdl_info_str=config_dict["cellranger_wdl_info"]
-                wdl_info=json.loads( wdl_info_str)
-                attr_lists=config_dict["cellranger_attr_lists"]
-                attr_dict=json.loads(attr_lists)
-                attr_params=attr_dict[parsed_args.org]
-            elif parsed_args.pipeline=="rnaseq":
-                input_dict_file=config_dict["rnaseq_input_json"]
-                wdl_info=config_dict["rnaseq_wdl_info"]
-                attr_lists=config_dict["rnaseq_attr_lists"]
-                attr_dict=json.loads(attr_lists)
-                attr_params=attr_dict[parsed_args.org]
+            pipeline_settings_general=config.get("PIPELINE_SETTINGS")
+            pipeline_settings=config.get("PIPELINE_SETTINGS").get(parsed_args.pipeline)
+            input_json=pipeline_settings.get("input_json")            
+            wdl_info=pipeline_settings.get("wdl_info") 
+            attr_dict=pipeline_settings.get("attr_lists")
+            input_dict=get_dict(input_json)
+            input_dict[pipeline_settings["sample_file_key"]]='"'+bucket_samplesheet+'"'
+            attr_params=attr_dict.get(parsed_args.org)
             ws_attr_response=add_workspace_attr(session,response["namespace"],
                                                 response["name"],
                                                 attr_params)
-            if ws_attr_response.status_code==200:
-                config_response=add_workspace_config(input_dict,wdl_info,
-                                                     session,
-                                                     response["namespace"],
-                                                     response["name"])
-                if config_response.status_code==201:
-                    entity_response=update_entities(response["namespace"],
-                                                    response["name"],
-                                                    session,
-                                                    config_dict["entity_file"])
-                    if entity_response.status_code==200:
-                        submit_response=submit_workspace(response["namespace"],
-                                                         response["name"],
-                                                         session)
+            check_response(ws_attr_response,200)
+            config_response=add_workspace_config(input_dict,wdl_info,
+                                                 session,
+                                                 response["namespace"],
+                                                 response["name"])
+            check_response(config_response,201)
+            entity_response=update_entities(response["namespace"],
+                                            response["name"],
+                                            session,
+                                            pipeline_settings_general.get("entity_file"))
+            check_response(entity_response,200)
+            submit_response=submit_workspace(response["namespace"],
+                                             response["name"],
+                                             session)
