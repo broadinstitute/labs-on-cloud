@@ -37,6 +37,8 @@ import drmaa
 import Collab_transfer
 import xml.etree.ElementTree as ET
 from six.moves.urllib.parse import urlencode
+import sys
+import sqlite3
 
 LOG_FORMAT="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 MAIN_LOGGER = "job"
@@ -141,7 +143,9 @@ def workspace_setup(service_acc_path,source_dir):
     response=session.post("https://api.firecloud.org/api/workspaces",
                            headers={"Content-type":"application/json",
                                     "Accept": "application/json"},
-                           json=body)    
+                           json=body)  
+    print "%%%%%%ws cred" 
+    print response.text 
     return(json.loads(response.text),session)
 
 def seqrundate(run_info): 
@@ -339,7 +343,7 @@ def submit_workspace(namespace,name,session):
                                           "Accept": "application/json"},
                                           json=body)   
     print response 
-    return(response)
+    return(response,json.loads(response.text))
 
 def update_entities(namespace,name,session,entity_file):
     '''
@@ -405,15 +409,6 @@ if __name__ == "__main__":
     config_dict["fastq_dir"]=config.get("ADMIN_SETTINGS").get("fastq_dir")
     config_dict["entity_file"]=config.get("PIPELINE_SETTINGS").get("entity_file")
 
-    '''
-    config_dict["dropseq_input_json"]=config.get("PIPELINE_SETTINGS").get("dropseq_input_json")
-    config_dict["dropseq_wdl_info"]=config.get("PIPELINE_SETTINGS").get("dropseq_wdl_info")
-    config_dict["dropseq_attr_lists"]=config.get("PIPELINE_SETTINGS").get("dropseq_attr_lists")
-    config_dict["cellranger_input_json"]=config.get("PIPELINE_SETTINGS").get("cellranger_input_json")
-    config_dict["cellranger_attr_lists"]=config.get("PIPELINE_SETTINGS").get("cellranger_attr_lists")
-    config_dict["cellranger_wdl_info"]=config.get("PIPELINE_SETTINGS").get("cellranger_wdl_info")
-    '''
-
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=parsed_args.service_acc_path
     add_suffix=source_dir_base+"_fastqs"
     if parsed_args.skip_demult:
@@ -429,7 +424,7 @@ if __name__ == "__main__":
                                  parsed_args.pipeline)
         #log and exit if code is false
     if os.listdir(fastq_dir):
-        response,session=workspace_setup(parsed_args.service_acc_path,
+        ws_response,session=workspace_setup(parsed_args.service_acc_path,
                                          source_dir_base)
         timestamp=get_timestamp(parsed_args.source_dir)
         if parsed_args.skip_demult:
@@ -438,12 +433,12 @@ if __name__ == "__main__":
             flowcell_id=get_flowcellid(source_dir_base)
             seqrun_date=seqrundate(os.path.join(parsed_args.source_dir,RUNINFO))
             tags=[flowcell_id,seqrun_date]
-        response_tags=set_tags(session,response["namespace"],
-                               response["name"],tags)
-        bucket_samplesheet="gs://"+os.path.join(response['bucketName'],
+        response_tags=set_tags(session,ws_response["namespace"],
+                               ws_response["name"],tags)
+        bucket_samplesheet="gs://"+os.path.join(ws_response['bucketName'],
                                                 base,
                                                 "samples.txt")
-        bucketname_fastq="gs://"+os.path.join(response['bucketName'],
+        bucketname_fastq="gs://"+os.path.join(ws_response['bucketName'],
                                               base)
         
         samplsheet_code=make_samplesheet(fastq_dir,
@@ -451,7 +446,7 @@ if __name__ == "__main__":
                                          bucketname_fastq,
                                          parsed_args.pipeline)
         if samplsheet_code==0:
-            upload_response=upload_fastqs(fastq_dir,response['bucketName'])
+            upload_response=upload_fastqs(fastq_dir,ws_response['bucketName'])
         if upload_response==0:
             pipeline_settings_general=config.get("PIPELINE_SETTINGS")
             pipeline_settings=config.get("PIPELINE_SETTINGS").get(parsed_args.pipeline)
@@ -461,20 +456,39 @@ if __name__ == "__main__":
             input_dict=get_dict(input_json)
             input_dict[pipeline_settings["sample_file_key"]]='"'+bucket_samplesheet+'"'
             attr_params=attr_dict.get(parsed_args.org)
-            ws_attr_response=add_workspace_attr(session,response["namespace"],
-                                                response["name"],
+            ws_attr_response=add_workspace_attr(session,ws_response["namespace"],
+                                                ws_response["name"],
                                                 attr_params)
-            check_response(ws_attr_response,200)
+            check_response(ws_attr_response.status_code,200)
             config_response=add_workspace_config(input_dict,wdl_info,
                                                  session,
-                                                 response["namespace"],
-                                                 response["name"])
-            check_response(config_response,201)
-            entity_response=update_entities(response["namespace"],
-                                            response["name"],
+                                                 ws_response["namespace"],
+                                                 ws_response["name"])
+            check_response(config_response.status_code,201)
+            entity_response=update_entities(ws_response["namespace"],
+                                            ws_response["name"],
                                             session,
                                             pipeline_settings_general.get("entity_file"))
-            check_response(entity_response,200)
-            submit_response=submit_workspace(response["namespace"],
-                                             response["name"],
+            check_response(entity_response.status_code,200)
+            submit_response,response_text=submit_workspace(ws_response["namespace"],
+                                             ws_response["name"],
                                              session)
+            check_response(submit_response.status_code,201)
+            status=get_status(ws_response["namespace"],
+                              ws_response["name"],
+                              response_text["submissionId"],
+                              session)
+            name=ws_response["name"]
+            namespace=ws_response["namespace"]
+            submission_id=response_text["submissionId"]
+            workspace_id=ws_response["workspaceId"]
+            conn = sqlite3.connect(config.get("PIPELINE_SETTINGS").get("database_file"))
+            c = conn.cursor()
+            table_name=config.get("PIPELINE_SETTINGS").get("table_name")
+            try:
+                c.execute("INSERT INTO {"+table_name+"}".\ 
+                          "({submissionId},{namespace},{name},{workspaceId},{status},{pipeline_name})".\ 
+                          " VALUES ("+submission_id+","+namespace+","+name+","+workspace_id+","+status+","+parsed_args.pipeline+")".\
+                          format(tn=table_name, idf="submissionId", cn="namespace"))
+            except sqlite3.IntegrityError:
+                print('ERROR: ID already exists in PRIMARY KEY column {}'.format(id_column))
