@@ -5,20 +5,22 @@ import loc
 
 
 def create_flowcells(sequencing_dirs, jira, project_id):
+    field_map = loc.get_field_name_to_id(jira)
     for run in loc.list_flow_cells(sequencing_dirs):
         if len(jira.search_issues(
-                'project=' + project_id + ' AND "Sequencing Run ID"=' + run['run_id'])) == 0:  # no duplicates
+                'project=' + project_id + ' AND issuetype = sequencing_run AND "Sequencing Run ID" ~ ' + run[
+                    'run_id'])) == 0:  # no duplicates
             flow_cell_path = run['path']
             issue = jira.create_issue(fields={
-                'project': {'id': project_id},
-                'flowcell': run['flowcell'],
-                'instrument': run['instrument'],
-                'run_date': str(run['run_date'].year) + '-' + str(run['run_date'].month) + '-' + str(
+                'project': project_id,
+                field_map['flowcell']: run['flowcell'],
+                field_map['instrument']: run['instrument'],
+                field_map['run_date']: str(run['run_date'].year) + '-' + str(run['run_date'].month) + '-' + str(
                     run['run_date'].day),
-                'Sequencing Run ID': run['run_id'],
-                'issuetype': {'name': 'sequencing_run',
-                              'status': 'SEQUENCING'}
+                field_map['Sequencing Run ID']: run['run_id'],
+                'issuetype': {'name': 'sequencing_run'}
             })
+
             attachments = [os.path.join(flow_cell_path, 'RunInfo.xml'),
                            os.path.join(flow_cell_path, 'RunParameters.xml')]
             for attachment in attachments:

@@ -50,9 +50,10 @@ if __name__ == '__main__':
         dest_base_url += '/'
     sequencing_dirs = args.dir
 
+    field_map = loc.get_field_name_to_id(jira)
     for run in loc.filter_flow_cells_by_run_date(sequencing_dirs=sequencing_dirs, days_old=days_old,
                                                  now=datetime.datetime.now()):
-        issues = jira.search_issues('project=' + project_id + ' AND "Sequencing Run ID"=' + run[
+        issues = jira.search_issues('project=' + project_id + ' AND "Sequencing Run ID" ~ ' + run[
             'run_id'] + ' AND (status=SEQUENCED OR status=ARCHIVE_FAILURE)')
         if len(issues) == 1:
             issue = issues[0]
@@ -61,9 +62,10 @@ if __name__ == '__main__':
                 archive_url = dest_base_url + run['run_id']
                 archive_result = loc.do_archive(run['path'], archive_url, tmpdir=args.tmpdir)
                 now = datetime.datetime.now()
-                jira.transition_issue(issue, 'archived',
-                                      {'archive_size': archive_result['archive_size'], 'archive_url': archive_url,
-                                       'archive_date': str(now.year) + '-' + str(
+                jira.transition_issue(issue, 'ARCHIVED',
+                                      {field_map['archive_size']: archive_result['archive_size'],
+                                       field_map['archive_url']: archive_url,
+                                       field_map['archive_date']: str(now.year) + '-' + str(
                                            now.month) + '-' + str(now.day)})
 
                 if args.delete_path:
