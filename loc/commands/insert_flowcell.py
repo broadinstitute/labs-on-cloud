@@ -12,7 +12,7 @@ if __name__ == '__main__':
                         help='Sequencing directory',
                         required=True, action='append', nargs='+')
     parser.add_argument('--project',
-                        help='JIRA project id or key',
+                        help='JIRA project id',
                         required=True)
     parser.add_argument('--config',
                         help='Application config (logging, jira)')
@@ -27,4 +27,4 @@ if __name__ == '__main__':
     jira = JIRA(config['jira'])
     project_id = args.project
     sequencing_dirs = args.dir
-    loc.create_flowcells(sequencing_dirs=sequencing_dirs, jira=jira)
+    loc.create_flowcells(sequencing_dirs=sequencing_dirs, jira=jira, project_id=project_id)
