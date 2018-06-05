@@ -24,5 +24,5 @@ if __name__ == '__main__':
 
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
-    jira = JIRA(config['jira'])
+    jira = JIRA(**config['jira'])
     loc.create_flowcells(sequencing_dirs=args.dir, jira=jira, project_id=args.project)

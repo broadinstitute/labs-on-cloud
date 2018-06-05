@@ -7,13 +7,15 @@ import loc
 def create_flowcells(sequencing_dirs, jira, project_id):
     field_map = loc.get_field_name_to_id(jira)
     for run in loc.list_flow_cells(sequencing_dirs):
-        if len(jira.search_issues(
-                'project=' + project_id + ' AND issuetype = sequencing_run AND "Sequencing Run ID" ~ ' + run[
-                    'run_id'])) == 0:  # no duplicates
+        issues = jira.search_issues(
+            'project=' + project_id + ' AND issuetype=sequencing_run AND "Sequencing Run ID" ~ ' + run[
+                'run_id'])
+        if len(issues) == 0:  # no duplicates
             flow_cell_path = run['path']
             issue = jira.create_issue(fields={
                 'project': project_id,
                 field_map['flowcell']: run['flowcell'],
+                'summary': run['flowcell'],
                 field_map['instrument']: run['instrument'],
                 field_map['run_date']: str(run['run_date'].year) + '-' + str(run['run_date'].month) + '-' + str(
                     run['run_date'].day),
@@ -23,9 +25,13 @@ def create_flowcells(sequencing_dirs, jira, project_id):
 
             attachments = [os.path.join(flow_cell_path, 'RunInfo.xml'),
                            os.path.join(flow_cell_path, 'RunParameters.xml')]
+
             for attachment in attachments:
-                jira.add_attachment(issue=issue, attachment=attachment)
-            jira.transition_issue(issue, 'SEQUENCED')
+                if os.path.exists(attachment):
+                    jira.add_attachment(issue=issue, attachment=attachment)
+            jira.transition_issue(issue, 'To Sequenced')
+        elif len(issues) > 1:
+            raise ValueError('Duplicate run id:' + run['run_id'])
 
 
 def filter_flow_cells_by_run_date(sequencing_dirs, days_old=180, now=datetime.now()):

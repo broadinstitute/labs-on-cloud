@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
-    jira = JIRA(config['jira'])
+    jira = JIRA(**config['jira'])
 
     project_id = args.project
     days_old = args.days_old
@@ -56,12 +56,12 @@ if __name__ == '__main__':
             'run_id'] + ' AND (status=SEQUENCED OR status=ARCHIVE_FAILURE)')
         if len(issues) == 1:
             issue = issues[0]
-            jira.transition_issue(issue, 'ARCHIVING')
+            jira.transition_issue(issue, 'To Archiving')
             try:
                 archive_url = dest_base_url + run['run_id']
                 archive_result = loc.do_archive(run['path'], archive_url, tmpdir=args.tmpdir)
                 now = datetime.datetime.now()
-                jira.transition_issue(issue, 'ARCHIVED',
+                jira.transition_issue(issue, 'To Archived',
                                       {field_map['archive_size']: archive_result['archive_size'],
                                        field_map['archive_url']: archive_url,
                                        field_map['archive_date']: str(now.year) + '-' + str(
@@ -70,7 +70,7 @@ if __name__ == '__main__':
                 if args.delete_path:
                     check_call(['rm', '-rf', run['path']])
             except Exception as ex:
-                jira.transition_issue(issue, 'ARCHIVE_FAILURE')
+                jira.transition_issue(issue, 'Archive Failure')
                 logger.error(str(ex))
         elif len(issues) > 1:
             logger.error('More than one run id found for ' + run['run_id'])
