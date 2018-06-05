@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    with open(sys.argv[1], 'r') as f:
+    with open(args.config, 'r') as f:
         config = json.load(f)
 
     logging.config.dictConfig(config['logging'])
