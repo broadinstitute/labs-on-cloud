@@ -17,7 +17,7 @@ def create_flowcells(sequencing_dirs, jira, project_id):
             files = os.listdir(flow_cell_path)
             for f in files:
                 if f.lower() in file_names_to_attach:
-                    attachments.push(os.path.join(flow_cell_path, f))
+                    attachments.append(os.path.join(flow_cell_path, f))
             if len(attachments) != len(file_names_to_attach):
                 raise ValueError('Attachments not found')
 
