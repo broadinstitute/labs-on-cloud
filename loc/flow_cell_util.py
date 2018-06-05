@@ -56,7 +56,7 @@ def filter_flow_cells_by_run_date(sequencing_dirs, days_old=180, now=datetime.no
 
 
 def list_flow_cells(sequencing_dirs):
-    year_start = str(datetime.now())[0:2]
+    year_start = str(datetime.datetime.now().year)[0:2]
     for sequencing_dir in sequencing_dirs:
         flow_cells = os.listdir(sequencing_dir)
         for flow_cell_dir in flow_cells:
@@ -75,6 +75,8 @@ def list_flow_cells(sequencing_dirs):
                     run_date = datetime(year=int(year), month=int(month), day=int(day))
                 else:
                     run_date = dateutil.parser.parse(run_date)
+                if run_date > datetime.datetime.now():
+                    raise ValueError(run_id + ' date is in the future.')
                 instrument = run.find('Instrument').text
                 flowcell = run.find('Flowcell').text
                 d = {'flowcell': flowcell, 'run_date': run_date, 'instrument': instrument, 'run_id': run_id,
