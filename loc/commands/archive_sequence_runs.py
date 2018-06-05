@@ -30,6 +30,9 @@ if __name__ == '__main__':
     parser.add_argument('--delete_path',
                         help='Delete the sequencing run after completion.',
                         action='store_true')
+    parser.add_argument('--dry_run',
+                        help='Only print list of run ids eligible for archiving',
+                        action='store_true')
     parser.add_argument('--tmpdir',
                         help='Temporary directory to create archive', default='/tmp')
 
@@ -56,21 +59,24 @@ if __name__ == '__main__':
             'run_id'] + ' AND (status=SEQUENCED OR status=ARCHIVE_FAILURE)')
         if len(issues) == 1:
             issue = issues[0]
-            jira.transition_issue(issue, 'To Archiving')
-            try:
-                archive_url = dest_base_url + run['run_id']
-                archive_result = loc.do_archive(run['path'], archive_url, tmpdir=args.tmpdir)
-                now = datetime.datetime.now()
-                jira.transition_issue(issue, 'To Archived',
-                                      {field_map['archive_size']: archive_result['archive_size'],
-                                       field_map['archive_url']: archive_url,
-                                       field_map['archive_date']: str(now.year) + '-' + str(
-                                           now.month) + '-' + str(now.day)})
+            if args.dry_run:
+                print(run['run_id'])
+            else:
+                jira.transition_issue(issue, 'To Archiving')
+                try:
+                    archive_url = dest_base_url + run['run_id']
+                    archive_result = loc.do_archive(run['path'], archive_url, tmpdir=args.tmpdir)
+                    now = datetime.datetime.now()
+                    jira.transition_issue(issue, 'To Archived',
+                                          {field_map['archive_size']: archive_result['archive_size'],
+                                           field_map['archive_url']: archive_url,
+                                           field_map['archive_date']: str(now.year) + '-' + str(
+                                               now.month) + '-' + str(now.day)})
 
-                if args.delete_path:
-                    check_call(['rm', '-rf', run['path']])
-            except Exception as ex:
-                jira.transition_issue(issue, 'Archive Failure')
-                logger.error(str(ex))
+                    if args.delete_path:
+                        check_call(['rm', '-rf', run['path']])
+                except Exception as ex:
+                    jira.transition_issue(issue, 'Archive Failure')
+                    logger.error(str(ex))
         elif len(issues) > 1:
             logger.error('More than one run id found for ' + run['run_id'])
