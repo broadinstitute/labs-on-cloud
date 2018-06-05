@@ -16,7 +16,9 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument('--config',
                         help='Application config (logging, jira)')
-
+    parser.add_argument('--verbose',
+                        help='Print progress information',
+                        action='store_true')
     args = parser.parse_args()
 
     with open(args.config, 'r') as f:
@@ -25,4 +27,4 @@ if __name__ == '__main__':
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
     jira = JIRA(**config['jira'])
-    loc.create_flowcells(sequencing_dirs=args.dir, jira=jira, project_id=args.project)
+    loc.create_flowcells(sequencing_dirs=args.dir, jira=jira, project_id=args.project, verbose=args.verbose)

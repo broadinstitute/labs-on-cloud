@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import loc
 
 
-def create_flowcells(sequencing_dirs, jira, project_id):
+def create_flowcells(sequencing_dirs, jira, project_id, verbose=False):
     field_map = loc.get_field_name_to_id(jira)
     file_names_to_attach = ['RunInfo.xml'.lower(), 'RunParameters.xml'.lower()]
     for run in loc.list_flow_cells(sequencing_dirs):
@@ -20,7 +20,8 @@ def create_flowcells(sequencing_dirs, jira, project_id):
                     attachments.append(os.path.join(flow_cell_path, f))
             if len(attachments) != len(file_names_to_attach):
                 raise ValueError('Attachments not found')
-
+            if verbose:
+                print(run['run_id'])
             issue = jira.create_issue(fields={
                 'project': project_id,
                 field_map['flowcell']: run['flowcell'],
