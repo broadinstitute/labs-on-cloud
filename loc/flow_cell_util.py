@@ -68,7 +68,7 @@ def list_flow_cells(sequencing_dirs):
                 run = tree.find('Run')
                 run_id = run.attrib['Id']
                 run_date = run.find('Date').text  # e.g. 180521 year, month, day or 3/19/2018 2:28:33 PM
-                if len(run_date) == 8:
+                if len(run_date) == 6:
                     year = year_start + run_date[0:2]
                     month = run_date[2:4]
                     day = run_date[4:6]
