@@ -10,7 +10,7 @@ if __name__ == '__main__':
         description='Archive sequencing runs in tar.xy format')
     parser.add_argument('--dir',
                         help='Sequencing directory',
-                        required=True, action='append', nargs='+')
+                        required=True, action='append')
     parser.add_argument('--project',
                         help='JIRA project id',
                         required=True)
@@ -25,6 +25,4 @@ if __name__ == '__main__':
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
     jira = JIRA(config['jira'])
-    project_id = args.project
-    sequencing_dirs = args.dir
-    loc.create_flowcells(sequencing_dirs=sequencing_dirs, jira=jira, project_id=project_id)
+    loc.create_flowcells(sequencing_dirs=args.dir, jira=jira, project_id=args.project)
