@@ -15,7 +15,7 @@ if __name__ == '__main__':
         description='Archive sequencing runs in tar.xy format')
     parser.add_argument('--dir',
                         help='Sequencing directory',
-                        required=True, action='append', nargs='+')
+                        required=True, action='append')
     parser.add_argument('--dest',
                         help='gs:// base URL to archive to',
                         required=True)
