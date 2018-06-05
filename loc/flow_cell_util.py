@@ -39,6 +39,10 @@ def create_flowcells(sequencing_dirs, jira, project_id, verbose=False):
             jira.transition_issue(issue, 'To Sequenced')
         elif len(issues) > 1:
             raise ValueError('Duplicate run id:' + run['run_id'])
+        else:
+            issues[0].update(
+                {field_map['run_date']: str(run['run_date'].year) + '-' + str(run['run_date'].month) + '-' + str(
+                    run['run_date'].day)})
 
 
 def filter_flow_cells_by_run_date(sequencing_dirs, days_old=180, now=datetime.now()):
@@ -56,7 +60,7 @@ def filter_flow_cells_by_run_date(sequencing_dirs, days_old=180, now=datetime.no
 
 
 def list_flow_cells(sequencing_dirs):
-    year_start = str(datetime.datetime.now().year)[0:2]
+    year_start = str(datetime.now().year)[0:2]
     for sequencing_dir in sequencing_dirs:
         flow_cells = os.listdir(sequencing_dir)
         for flow_cell_dir in flow_cells:
@@ -75,7 +79,7 @@ def list_flow_cells(sequencing_dirs):
                     run_date = datetime(year=int(year), month=int(month), day=int(day))
                 else:
                     run_date = dateutil.parser.parse(run_date)
-                if run_date > datetime.datetime.now():
+                if run_date > datetime.now():
                     raise ValueError(run_id + ' date is in the future.')
                 instrument = run.find('Instrument').text
                 flowcell = run.find('Flowcell').text
