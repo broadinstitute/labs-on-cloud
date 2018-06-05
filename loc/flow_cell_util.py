@@ -6,12 +6,21 @@ import loc
 
 def create_flowcells(sequencing_dirs, jira, project_id):
     field_map = loc.get_field_name_to_id(jira)
+    file_names_to_attach = ['RunInfo.xml'.lower(), 'RunParameters.xml'.lower()]
     for run in loc.list_flow_cells(sequencing_dirs):
         issues = jira.search_issues(
             'project=' + project_id + ' AND issuetype=sequencing_run AND "Sequencing Run ID" ~ ' + run[
                 'run_id'])
         if len(issues) == 0:  # no duplicates
             flow_cell_path = run['path']
+            attachments = []
+            files = os.listdir(flow_cell_path)
+            for f in files:
+                if f.lower() in file_names_to_attach:
+                    attachments.push(os.path.join(flow_cell_path, f))
+            if len(attachments) != len(file_names_to_attach):
+                raise ValueError('Attachments not found')
+
             issue = jira.create_issue(fields={
                 'project': project_id,
                 field_map['flowcell']: run['flowcell'],
@@ -22,13 +31,6 @@ def create_flowcells(sequencing_dirs, jira, project_id):
                 field_map['Sequencing Run ID']: run['run_id'],
                 'issuetype': {'name': 'sequencing_run'}
             })
-            attachments = []
-            if os.path.isdir(flow_cell_path):
-                file_names_to_attach = ['RunInfo.xml'.lower(), 'RunParameters.xml'.lower()]
-                files = os.listdir(flow_cell_path)
-                for f in files:
-                    if f.lower() in file_names_to_attach:
-                        attachments.push(os.path.join(flow_cell_path, f))
 
             for attachment in attachments:
                 jira.add_attachment(issue=issue, attachment=attachment)
