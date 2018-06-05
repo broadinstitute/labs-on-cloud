@@ -1,5 +1,5 @@
 import json
-import sys
+import logging.config
 from jira import JIRA
 import logging
 import loc

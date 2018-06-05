@@ -1,7 +1,6 @@
 import json
-import sys
 from jira import JIRA
-import logging
+import logging.config
 import loc
 import datetime
 import argparse
