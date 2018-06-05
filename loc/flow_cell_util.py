@@ -39,10 +39,6 @@ def create_flowcells(sequencing_dirs, jira, project_id, verbose=False):
             jira.transition_issue(issue, 'To Sequenced')
         elif len(issues) > 1:
             raise ValueError('Duplicate run id:' + run['run_id'])
-        else:
-            issues[0].update(
-                {field_map['run_date']: str(run['run_date'].year) + '-' + str(run['run_date'].month) + '-' + str(
-                    run['run_date'].day)})
 
 
 def filter_flow_cells_by_run_date(sequencing_dirs, days_old=180, now=datetime.now()):
