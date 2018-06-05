@@ -51,7 +51,7 @@ def filter_flow_cells_by_run_date(sequencing_dirs, days_old=180, now=datetime.no
     date_months_ago = now - timedelta(days=days_old)
     for run in loc.list_flow_cells(sequencing_dirs):
         if run['run_date'] <= date_months_ago:
-            results.append(run['path'])
+            results.append(run)
     return results
 
 
