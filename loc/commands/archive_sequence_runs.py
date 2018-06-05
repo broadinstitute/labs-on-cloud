@@ -46,17 +46,16 @@ if __name__ == '__main__':
     dest_base_url = args.dest
     if dest_base_url[len(dest_base_url) - 1] != '/':
         dest_base_url += '/'
-    sequencing_dirs = args.dir
 
     field_map = loc.get_field_name_to_id(jira)
-    for run in loc.filter_flow_cells_by_run_date(sequencing_dirs=sequencing_dirs, days_old=days_old,
+    for run in loc.filter_flow_cells_by_run_date(sequencing_dirs=args.dir, days_old=days_old,
                                                  now=datetime.datetime.now()):
-        issues = jira.search_issues('project=' + project_id + ' AND "Sequencing Run ID" ~ ' + run[
-            'run_id'] + ' AND (status=SEQUENCED OR status="Archive Failure")')
+        issues = jira.search_issues('project=' + project_id + ' AND "Sequencing Run ID" ~ "' + str(
+            run['run_id']) + '" AND (status=SEQUENCED OR status="Archive Failure")')
         if len(issues) == 1:
             issue = issues[0]
             if args.dry_run:
-                print(run['run_id'])
+                print(str(run['run_id']))
             else:
                 jira.transition_issue(issue, 'To Archiving')
                 try:
