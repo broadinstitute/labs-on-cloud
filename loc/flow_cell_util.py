@@ -22,13 +22,16 @@ def create_flowcells(sequencing_dirs, jira, project_id):
                 field_map['Sequencing Run ID']: run['run_id'],
                 'issuetype': {'name': 'sequencing_run'}
             })
-
-            attachments = [os.path.join(flow_cell_path, 'RunInfo.xml'),
-                           os.path.join(flow_cell_path, 'RunParameters.xml')]
+            attachments = []
+            if os.path.isdir(flow_cell_path):
+                file_names_to_attach = ['RunInfo.xml'.lower(), 'RunParameters.xml'.lower()]
+                files = os.listdir(flow_cell_path)
+                for f in files:
+                    if f.lower() in file_names_to_attach:
+                        attachments.push(os.path.join(flow_cell_path, f))
 
             for attachment in attachments:
-                if os.path.exists(attachment):
-                    jira.add_attachment(issue=issue, attachment=attachment)
+                jira.add_attachment(issue=issue, attachment=attachment)
             jira.transition_issue(issue, 'To Sequenced')
         elif len(issues) > 1:
             raise ValueError('Duplicate run id:' + run['run_id'])
