@@ -6,7 +6,8 @@
 from setuptools import setup, find_packages
 
 requirements = [
-    'jira>=1.0.15'
+    'jira>=1.0.15',
+    'dateutil>=2.7.3'
 ]
 
 setup_requirements = [

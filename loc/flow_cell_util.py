@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 import os
 from datetime import datetime, timedelta
 import loc
+import dateutil.parser
 
 
 def create_flowcells(sequencing_dirs, jira, project_id, verbose=False):
@@ -66,11 +67,14 @@ def list_flow_cells(sequencing_dirs):
                 tree = ET.parse(os.path.join(flow_cell_path, 'RunInfo.xml'))
                 run = tree.find('Run')
                 run_id = run.attrib['Id']
-                run_date = run.find('Date').text  # e.g. 180521 year, month, day
-                year = year_start + run_date[0:2]
-                month = run_date[2:4]
-                day = run_date[4:6]
-                run_date = datetime(year=int(year), month=int(month), day=int(day))
+                run_date = run.find('Date').text  # e.g. 180521 year, month, day or 3/19/2018 2:28:33 PM
+                if len(run_date) == 8:
+                    year = year_start + run_date[0:2]
+                    month = run_date[2:4]
+                    day = run_date[4:6]
+                    run_date = datetime(year=int(year), month=int(month), day=int(day))
+                else:
+                    run_date = dateutil.parser.parse(run_date)
                 instrument = run.find('Instrument').text
                 flowcell = run.find('Flowcell').text
                 d = {'flowcell': flowcell, 'run_date': run_date, 'instrument': instrument, 'run_id': run_id,
