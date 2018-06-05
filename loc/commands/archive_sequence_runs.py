@@ -6,10 +6,6 @@ import datetime
 import argparse
 from subprocess import check_call
 
-# archiving
-# archive_complete
-# archive_failed
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Archive sequencing runs in tar.xy format')
@@ -56,7 +52,7 @@ if __name__ == '__main__':
     for run in loc.filter_flow_cells_by_run_date(sequencing_dirs=sequencing_dirs, days_old=days_old,
                                                  now=datetime.datetime.now()):
         issues = jira.search_issues('project=' + project_id + ' AND "Sequencing Run ID" ~ ' + run[
-            'run_id'] + ' AND (status=SEQUENCED OR status=ARCHIVE_FAILURE)')
+            'run_id'] + ' AND (status=SEQUENCED OR status="Archive Failure")')
         if len(issues) == 1:
             issue = issues[0]
             if args.dry_run:
