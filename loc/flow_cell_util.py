@@ -72,7 +72,7 @@ def list_flow_cells(sequencing_dirs):
                     year = year_start + run_date[0:2]
                     month = run_date[2:4]
                     day = run_date[4:6]
-                    run_date = datetime(year=int(year), month=int(month), day=int(day))
+                    run_date = dateutil.parser.parse(month + '/' + day + '/' + year)
                 else:
                     run_date = dateutil.parser.parse(run_date)
                 if run_date > datetime.now():
