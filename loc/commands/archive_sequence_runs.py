@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     with open(args.config, 'r') as f:
         config = json.load(f)
-
+    check_call(['gsutil'])  # ensure gsutil is in path
     logging.config.dictConfig(config['logging'])
     logger = logging.getLogger()
     jira = JIRA(**config['jira'])
